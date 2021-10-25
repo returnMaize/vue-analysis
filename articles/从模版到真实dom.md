@@ -44,4 +44,4 @@ main.js
 
 可能有朋友至今都不知道 App 里面到底有什么，当然好奇心比较强的朋友可能已经知道了。好奇心不强的朋友我给你们打印出来了。
 
-![app](https://github.com/returnMaize/vue-analysis/images/app.png)
+![app](https://github.com/returnMaize/vue-analysis/blob/main/images/app.png)
