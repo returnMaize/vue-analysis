@@ -1,6 +1,10 @@
+## 准备
+
+---
+
 平时使用 Vue 开发项目时，我们通常是创建一个 xxx.vue 文件，然后在文件中写下类似代码
 
-```
+```html
 <template>
   <div class="app">
     <h1>{{ title }}</h1>
@@ -8,19 +12,19 @@
 </template>
 
 <script>
-export default {
-  data() {
-    return {
-      title: "hello vue",
-    };
-  },
-};
+  export default {
+    data() {
+      return {
+        title: 'hello vue',
+      }
+    },
+  }
 </script>
 ```
 
 假设该文件是 App.vue 文件，然后我们在 main.js 文件中引入该文件，并且完成实例化和挂在操作
 
-```
+```js
 import Vue from 'vue'
 import App from './App.vue'
 
@@ -45,3 +49,75 @@ main.js
 可能有朋友至今都不知道 App 里面到底有什么，当然好奇心比较强的朋友可能已经知道了。好奇心不强的朋友我给你们打印出来了。
 
 ![app](https://github.com/returnMaize/vue-analysis/blob/main/images/app.png)
+
+是不是和想象的不太一样，我们明明在 App.vue 文件中只导出了一个 data，为什么多出这么多的属性，里面的 render 函数是哪来的，其他的属性又是怎么来的。这些其实是 vue-loader 给我们做的，他会把单文件转化成一个 JavaScript 对象，并且把我们写的模版编译成 render 函数。我们这里只需要关心 render 函数和我们导出的对象即可。
+
+_编译之后会单独出一节，这里我们只需要知道 Vue 会把 template 编译成 render 函数即可_
+
+现在，我们已经知道了我们平时开发写的单文件 vue，其实就是模版和我们导出的对象，由于模版会被编译成 render 函数，且我们这小节只关心数据，所以我们暂时先把 App 看成是 render 函数和数据 `App = { render, data: f data() }`
+
+接下来我们就开始揭秘 Vue 是如何把 render + data => dom
+
+`new Vue({ render: h => h(App) }).$mount('#app')`
+
+- 实例化 Vue
+- 执行 \$mount 方法
+
+## Vue 的实例化
+
+---
+
+首先我们来看 Vue 的定义
+
+```js
+function Vue(options) {
+  if (process.env.NODE_ENV !== 'production' && !(this instanceof Vue)) {
+    warn('Vue is a constructor and should be called with the `new` keyword')
+  }
+  this._init(options)
+}
+```
+
+Vue 实例化就是调用了一下 \_init 方法，然后做了一些异常处理，如果用户不是通过 new 的方式调用便抛个警告
+
+然后我们来看 \_init 方法（这里会移除一些无关紧要的代码）
+
+```js
+Vue.prototype._init = function (options?: Object) {
+  const vm = this
+  vm._uid = uid++
+
+  // a flag to avoid this being observed
+  vm._isVue = true
+  // merge options
+  if (options && options._isComponent) {
+    initInternalComponent(vm, options)
+  } else {
+    vm.$options = mergeOptions(
+      resolveConstructorOptions(vm.constructor),
+      options || {},
+      vm
+    )
+  }
+
+  vm._self = vm
+  initLifecycle(vm)
+  initEvents(vm)
+  initRender(vm)
+  callHook(vm, 'beforeCreate')
+  initInjections(vm) // resolve injections before data/props
+  initState(vm)
+  initProvide(vm) // resolve provide after data/props
+  callHook(vm, 'created')
+
+  if (vm.$options.el) {
+    vm.$mount(vm.$options.el)
+  }
+}
+```
+
+可以看到，当我们实例化 Vue 时，vue 就是做了一堆初始化的操作，以及 beforeCreate 和 created 生命周期函数的调用。最后判断我们时候有传 el 属性，如果有，手动调用 $mount 方法，这里我们没有传，自己手动调用了 $mount 方法。
+
+## \$mount 方法
+
+---
